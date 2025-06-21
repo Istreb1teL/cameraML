@@ -1,0 +1,22 @@
+# Основные
+fastapi==0.95.2
+uvicorn==0.22.0
+python-multipart==0.0.6
+
+# Обработка изображений
+opencv-python==4.7.0.72
+Pillow==9.5.0
+numpy==1.24.3
+
+# Машинное обучение
+torch==2.0.1
+torchvision==0.15.2
+
+# Дополнительные
+requests==2.31.0
+psutil==5.9.5
+python-dotenv==1.0.0
+loguru==0.7.0
+
+# Мониторинг
+prometheus-client==0.17.0
