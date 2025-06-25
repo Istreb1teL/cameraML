@@ -6,15 +6,32 @@ from fastapi import FastAPI, UploadFile, File
 import cv2
 import os
 
+from fastapi.middleware.cors import CORSMiddleware
 from training_service.main import UNet
 
 app = FastAPI()
+
+# Добавляем CORS middleware для фронтенд-запросов
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Загрузка модели
 model = UNet().cpu()  # Используем упрощенную архитектуру как при обучении
 model.load_state_dict(torch.load("segmentation_model.pth", map_location='cpu'))
 model.eval()
 
+@app.get("/")
+async def root():
+    return {
+        "message": "Welcome to the Segmentation API!",
+        "endpoints": {
+            "/predict": "POST - Upload an image to get a segmentation mask"
+        }
+    }
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
