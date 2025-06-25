@@ -1,0 +1,1 @@
+2025-06-23 11:57:56,853 - inference_service.main - ERROR - Error loading model: [Errno 2] No such file or directory: 'segmentation_model.pth'
