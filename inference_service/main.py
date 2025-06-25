@@ -21,37 +21,52 @@ app.add_middleware(
 
 # Загрузка модели
 model = UNet().cpu()  # Используем упрощенную архитектуру как при обучении
-model.load_state_dict(torch.load("segmentation_model.pth", map_location='cpu'))
+model.load_state_dict(torch.load("/home/t1/PycharmProjects/cameraML/segmentation_model.pth", map_location='cpu'))
 model.eval()
 
-@app.get("/")
-async def root():
-    return {
-        "message": "Welcome to the Segmentation API!",
-        "endpoints": {
-            "/predict": "POST - Upload an image to get a segmentation mask"
-        }
-    }
 
-@app.post("/predict")
-async def predict(file: UploadFile = File(...)):
-    # Чтение изображения
-    contents = await file.read()
-    image = Image.open(io.BytesIO(contents)).convert("RGB")
-
-    # Препроцессинг
-    image = image.resize((256, 256))  # Такой же размер как при обучении
+def preprocess_image(frame):
+    """Преобразование кадра в тензор для модели"""
+    image = Image.fromarray(frame).convert("RGB")
+    image = image.resize((256, 256))
     image_tensor = torch.from_numpy(np.array(image)).float().permute(2, 0, 1) / 255.0
-    image_tensor = image_tensor.unsqueeze(0).cpu()
+    return image_tensor.unsqueeze(0).cpu()
 
-    # Предсказание
+
+def predict_mask(frame):
+    """Предсказание маски для кадра"""
     with torch.no_grad():
-        output = model(image_tensor)
-
-    # Постобработка
+        output = model(preprocess_image(frame))
     mask = (output.squeeze().numpy() > 0.5).astype(np.uint8) * 255
-    mask = cv2.resize(mask, (image.width, image.height))  # Возвращаем к исходному размеру
+    return cv2.resize(mask, (frame.shape[1], frame.shape[0]))
 
-    # Кодирование результата
-    _, mask_encoded = cv2.imencode('.png', mask)
-    return {"mask": mask_encoded.tobytes()}
+
+def main():
+    cap = cv2.VideoCapture(0)  # 0 - индекс камеры (обычно встроенная)
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        # Получаем маску
+        mask = predict_mask(frame)
+
+        # Наложение маски на кадр (зелёный цвет)
+        overlay = frame.copy()
+        overlay[mask > 0] = [0, 255, 0]  # Закрашиваем маску зелёным
+
+        # Вывод результата
+        cv2.imshow("Camera", frame)
+        cv2.imshow("Mask", mask)
+        cv2.imshow("Segmentation", overlay)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):  # Выход по 'q'
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+
+if __name__ == "__main__":
+    main()
